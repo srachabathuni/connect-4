@@ -15,7 +15,8 @@ while True:
         try:
             col = int(userin.strip())
             break
-        except:
+        except ValueError:
+            print("Invalid entry")
             continue
 
     ret = board.play_check_win(player, col)
