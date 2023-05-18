@@ -39,7 +39,56 @@ class Board:
         self.move_stack = []
         for i in range(self.rows):
             self.board.append([BLANK] * self.columns)
+        self.positive_diag = []
+        for i in range(self.rows):
+            self.positive_diag.append([None] * self.columns)
+        self.negative_diag = []
+        for i in range(self.rows):
+            self.negative_diag.append([None] * self.columns)
+        self._calculate_diags()
 
+    def _calculate_diags(self):
+        # Positive
+        for i in range(self.columns):
+            points = []
+            cr = 0
+            for j in range(0, min(self.columns-i, self.rows)):
+                points.append([cr, i+j])
+                cr += 1
+            if len(points) >= self.towin:
+                for point in points:
+                    self.positive_diag[point[0]][point[1]] = points
+
+        for i in range(self.rows):
+            points = []
+            cc = 0
+            for j in range(0, min([self.rows-i, self.columns])):
+                points.append([i+j, cc])
+                cc += 1
+            if len(points) >= self.towin:
+                for point in points:
+                    self.positive_diag[point[0]][point[1]] = points
+
+        # Negative
+        for i in range(self.columns):
+            points = []
+            cr = 0
+            for j in range(0, min([i, self.rows])):
+                points.append([cr, i-j])
+                cr += 1
+            if len(points) >= self.towin:
+                for point in points:
+                    self.negative_diag[point[0]][point[1]] = points
+
+        for i in range(self.rows):
+            points = []
+            cc = self.columns-1
+            for j in range(0, min([self.rows-i, self.columns])):
+                points.append([i+j, cc])
+                cc -= 1
+            if len(points) >= self.towin:
+                for point in points:
+                    self.negative_diag[point[0]][point[1]] = points
 
     def get_columns(self):
         return self.columns
@@ -106,48 +155,25 @@ class Board:
                 seq = 0
         return WIN_NOT_FOUND
 
-    def _check_diag_win(self, player, column):
-        row = self.chips_in_column[column] - 1
-        # Positive slope
-        if row > column:
-            c = 0
-            r = row - column
-        else:
-            r = 0
-            c = column - row
-        seq = 0
-        while True:
-            if self.board[r][c] == player:
-                seq += 1
-                if seq == self.towin:
-                    return WIN_FOUND
-            else:
-                seq = 0
-            r += 1
-            c += 1
-            if r >= self.rows or c >= self.columns:
-                break
+    def _check_one_diag(self, player, diag, row, column):
+        if diag[row][column]:
+            seq = 0
+            for point in diag[row][column]:
+                if self.board[point[0]][point[1]] == player:
+                    seq += 1
+                    if seq == self.towin:
+                        return WIN_FOUND
+                else:
+                    seq = 0
 
-        # Negative slope
-        if row > (self.columns-column-1):
-            c = self.columns-1
-            r = row - (self.columns - column)
-        else:
-            r = 0
-            c = column + row
-        seq = 0
-        while True:
-            if self.board[r][c] == player:
-                seq += 1
-                if seq == self.towin:
-                    return WIN_FOUND
-            else:
-                seq = 0
-            r += 1
-            c -= 1
-            if r >= self.rows or c < 0:
-                break
+    def _check_diag_win(self, player, column):
+        row = self.chips_in_column[column]-1
+        if self._check_one_diag(player, self.positive_diag, row, column) == WIN_FOUND:
+            return WIN_FOUND
+        if self._check_one_diag(player, self.negative_diag, row, column) == WIN_FOUND:
+            return WIN_FOUND
         return WIN_NOT_FOUND
+
 
     def play_check_win(self, player, column):
         p = self.play(player, column)

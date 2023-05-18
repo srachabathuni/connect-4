@@ -15,8 +15,7 @@ while True:
         try:
             col = int(userin.strip())
             break
-        except e:
-            print(e)
+        except:
             continue
 
     ret = board.play_check_win(player, col)
