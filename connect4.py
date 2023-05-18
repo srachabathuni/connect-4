@@ -19,7 +19,7 @@ ERR_STACK_EMPTY = 4
 WIN_FOUND = 5
 WIN_NOT_FOUND = 6
 
-MAX_DEPTH = TO_WIN + 2
+MAX_DEPTH = TO_WIN + 3
 MIN_WEIGHT = -100000
 
 DEBUG = False
@@ -48,6 +48,7 @@ class Board:
         for i in range(self.rows):
             self.negative_diag.append([None] * self.columns)
         self._calculate_diags()
+        self.next_player = PLAYER_1
 
     def _calculate_diags(self):
         # Positive
@@ -98,16 +99,17 @@ class Board:
     def get_rows(self):
         return self.rows
 
-    def play(self, player, column):
+    def play(self, column):
         if self.columns <= column:
             return ERR_INVALID_COLUMN
 
         if self.chips_in_column[column] == self.rows:
             return ERR_COLUMN_FULL
 
-        self.board[self.chips_in_column[column]][column] = player
+        self.board[self.chips_in_column[column]][column] = self.next_player
         self.chips_in_column[column] += 1
         self.move_stack.append(column)
+        self._flip_player()
         return SUCCESS
 
     def undo(self):
@@ -117,6 +119,7 @@ class Board:
         column = self.move_stack.pop(-1)
         self.board[self.chips_in_column[column]-1][column] = BLANK
         self.chips_in_column[column] -= 1
+        self._flip_player()
         return SUCCESS
 
     def _check_column_win(self, player, column):
@@ -137,7 +140,6 @@ class Board:
             else:
                 seq = 0
         return WIN_NOT_FOUND
-
 
     def _check_row_win(self, player, column):
         seq = 0
@@ -174,8 +176,12 @@ class Board:
             return WIN_FOUND
         return WIN_NOT_FOUND
 
-    def play_check_win(self, player, column):
-        p = self.play(player, column)
+    def _flip_player(self):
+        self.next_player = PLAYER_2 if self.next_player == PLAYER_1 else PLAYER_1
+
+    def play_check_win(self, column):
+        player = self.next_player
+        p = self.play(column)
         if p != SUCCESS:
             return p
         if self._check_column_win(player, column) == WIN_FOUND:
@@ -215,16 +221,11 @@ class Board:
         outstream.write("======================\n")
 
 
-def flip_player(player):
-    return PLAYER_2 if player == PLAYER_1 else PLAYER_1
-
-
 class Connect4Engine:
-    def __init__(self, board, player):
+    def __init__(self, board):
         self.board = board
-        self.player = player
 
-    def _get_weight(self, board: Board, player: int, column: int,
+    def _get_weight(self, board: Board, column: int,
                     depth: int, max_depth: int, player_multiplier: int) -> int:
         if depth > max_depth:
             # debug(f"IN: get_weight: player: {PLAYER_TEXT[player]}, col: {column}, depth: {depth}, pm: {player_multiplier}")
@@ -235,7 +236,8 @@ class Connect4Engine:
         if board.is_column_full(column):
             return MIN_WEIGHT * player_multiplier
 
-        ret = board.play_check_win(player, column)
+        player = board.next_player
+        ret = board.play_check_win(column)
         if ret == WIN_FOUND:
             weight = (max_depth - depth) * player_multiplier
             debug(f"IN: get_weight: player: {PLAYER_TEXT[player]}, col: {column}, depth: {depth}, pm: {player_multiplier}")
@@ -252,7 +254,7 @@ class Connect4Engine:
         moves = [MIN_WEIGHT * player_multiplier] * board.columns
         for i in range(board.columns):
             if not board.is_column_full(i):
-                moves[i] = self._get_weight(board, flip_player(player), i, depth+1, max_depth, (-1)*player_multiplier)
+                moves[i] = self._get_weight(board, i, depth+1, max_depth, (-1)*player_multiplier)
 
         if player_multiplier < 0:
             ret = max(moves)
@@ -268,12 +270,12 @@ class Connect4Engine:
         board.undo()
         return ret
 
-    def _find_best_move(self, board, player, max_depth):
+    def _find_best_move(self, board, max_depth):
         next_moves = [x for x in range(0, board.columns)]
         for cur_depth in range(1, max_depth + 1):
             moves = [MIN_WEIGHT] * len(next_moves)
             for i in range(len(moves)):
-                moves[i] = self._get_weight(board, player, next_moves[i], 0, cur_depth, 1)
+                moves[i] = self._get_weight(board, next_moves[i], 0, cur_depth, 1)
             print(f"find_best_move: {moves}")
 
             short_list = []
@@ -294,7 +296,7 @@ class Connect4Engine:
         return next_moves[random.randint(0, len(next_moves)-1)]
 
     def get_best_move(self):
-        column = self._find_best_move(self.board, self.player, MAX_DEPTH)
+        column = self._find_best_move(self.board, MAX_DEPTH)
         return column
 
 

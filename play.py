@@ -3,8 +3,8 @@ import connect4
 
 board = connect4.Board()
 board.print_board()
-player = connect4.PLAYER_1
 while True:
+    player = board.next_player
     if board.is_full():
         print("No more moves")
         sys.exit(0)
@@ -19,27 +19,23 @@ while True:
             print("Invalid entry")
             continue
 
-    ret = board.play_check_win(player, col)
+    ret = board.play_check_win(col)
     board.print_board()
     if ret == connect4.WIN_FOUND:
         print("User won!")
         sys.exit(0)
-
-    player = connect4.flip_player(player)
 
     if board.is_full():
         print("No more moves")
         sys.exit(0)
 
     print("Thinking...")
-    eng = connect4.Connect4Engine(board, player)
+    eng = connect4.Connect4Engine(board)
     move = eng.get_best_move()
-    ret = board.play_check_win(player, move)
+    ret = board.play_check_win(move)
     board.print_board()
     if ret == connect4.WIN_FOUND:
         print("Computer won!")
         sys.exit(0)
-
-    player = connect4.flip_player(player)
 
 
