@@ -11,7 +11,8 @@ while True:
 
     while True:
         print(f"Player: {connect4.PLAYER_TEXT[player]}")
-        userin = input("Enter column: ")
+        print("Enter column: ")
+        userin = input()
         try:
             col = int(userin.strip())
             break

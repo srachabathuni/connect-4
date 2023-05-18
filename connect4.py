@@ -22,10 +22,11 @@ MAX_DEPTH = TO_WIN
 MIN_WEIGHT = 100000
 MAJOR_WEIGHT_MULT = 1000
 
-DEBUG = False
+DEBUG = True
 def debug(msg):
     if DEBUG:
-        print(msg)
+        sys.stderr.write(msg)
+        sys.stderr.write("\n")
 
 class Board:
     def __init__(self):
@@ -163,15 +164,15 @@ class Board:
                 return False
         return True
 
-    def print_board(self):
+    def print_board(self, outstream=sys.stdout):
         for r in range(self.rows-1, -1, -1):
             for c in self.board[r]:
-                sys.stdout.write(f"{PLAYER_TEXT[c]} ")
-            print("")
+                outstream.write(f"{PLAYER_TEXT[c]} ")
+            outstream.write("\n")
         for i in range(self.columns):
-            sys.stdout.write(f"{i} ")
-        print("")
-        print("======================")
+            outstream.write(f"{i} ")
+        outstream.write("\n")
+        outstream.write("======================\n")
 
 
 def flip_player(player):
@@ -183,16 +184,20 @@ class Connect4Engine:
         self.player = player
 
     def _get_weight(self, board, player, column, depth, max_depth, player_multiplier):
-        debug(f"IN: get_weight: player: {PLAYER_TEXT[player]}, col: {column}, depth: {depth}, pm: {player_multiplier}")
         if depth > MAX_DEPTH:
-            debug(f"OUT: get_weight: max_depth, player: {PLAYER_TEXT[player]}, col: {column}, depth: {depth}, pm: {player_multiplier}")
+            #debug(f"IN: get_weight: player: {PLAYER_TEXT[player]}, col: {column}, depth: {depth}, pm: {player_multiplier}")
+            #debug(f"OUT: get_weight: max_depth, player: {PLAYER_TEXT[player]}, col: {column}, depth: {depth}, pm: {player_multiplier}")
+            #debug("-------------------")
             return 0
 
         nb = board.clone()
         ret = nb.play_check_win(player, column)
         if ret == WIN_FOUND:
             weight = (MAX_DEPTH - depth) * player_multiplier * MAJOR_WEIGHT_MULT
+            debug(f"IN: get_weight: player: {PLAYER_TEXT[player]}, col: {column}, depth: {depth}, pm: {player_multiplier}")
+            nb.print_board(outstream=sys.stderr)
             debug(f"OUT: val: {weight},  get_weight: player: {PLAYER_TEXT[player]}, col: {column}, depth: {depth}, pm: {player_multiplier}")
+            debug("-------------------")
             return weight
 
         if ret == ERR_COLUMN_FULL:
@@ -202,19 +207,24 @@ class Connect4Engine:
         for i in range(len(moves)):
             moves[i] = self._get_weight(nb, flip_player(player), i, depth+1, max_depth, (-1)*player_multiplier)
 
-        moves = sorted(moves)
+        sorted_moves = sorted(moves)
         if player_multiplier < 0: 
-            first = moves[-1]
-            second = moves[-2]
+            first = sorted_moves[-1]
+            second = sorted_moves[-2]
         else:
-            first = moves[0]
-            second = moves[1]
+            first = sorted_moves[0]
+            second = sorted_moves[1]
 
         if abs(second) == MIN_WEIGHT:
             second = 0
         
         ret = int(first/MAJOR_WEIGHT_MULT)*MAJOR_WEIGHT_MULT + first%MAJOR_WEIGHT_MULT+second
+        debug(f"IN: get_weight: player: {PLAYER_TEXT[player]}, col: {column}, depth: {depth}, pm: {player_multiplier}")
+        nb.print_board(outstream=sys.stderr)
+        debug(f"moves: {moves}")
         debug(f"OUT: val: {ret},  get_weight: player: {PLAYER_TEXT[player]}, col: {column}, depth: {depth}, pm: {player_multiplier}")
+        debug("-------------------")
+
         return ret
 
 
@@ -237,4 +247,16 @@ class Connect4Engine:
         column = self._find_best_move(self.board, self.player, MAX_DEPTH)
         return column
         
+
+
+class BoardHistory:
+    def __init__(self):
+        self.boards = []
+
+    def push(self, board):
+        self.boards.append(board.clone())
+
+    def print_history(self):
+        for board in self.boards:
+            board.print_board()
 
