@@ -268,7 +268,7 @@ class Connect4Engine:
         ret = board.play_check_win(column)
         self.iter_count += 1
         if ret == WIN_FOUND:
-            weight = (max_depth - depth) * player_multiplier
+            weight = (max_depth - depth + 1) * player_multiplier
             debug(f"IN: get_weight: player: {PLAYER_TEXT[player]}, col: {column}, depth: {depth}, pm: {player_multiplier}")
             board.print_board(outstream=sys.stderr)
             debug(f"OUT: val: {weight},  get_weight: player: {PLAYER_TEXT[player]}, col: {column}, depth: {depth}, pm: {player_multiplier}")
@@ -301,7 +301,7 @@ class Connect4Engine:
 
     def _find_best_move(self, board, max_depth):
         next_moves = [x for x in range(0, board.columns)]
-        remaining_iters = (board.columns ** MAX_DEPTH)
+        remaining_iters = (board.columns ** MAX_DEPTH) * 2
         cur_depth = 0
         while True:
             cur_depth += 1
@@ -312,7 +312,7 @@ class Connect4Engine:
             moves = [MIN_WEIGHT] * len(next_moves)
             self.iter_count = 0
             for i in range(len(moves)):
-                moves[i] = self._get_weight(board, next_moves[i], 0, cur_depth, 1)
+                moves[i] = self._get_weight(board, next_moves[i], 1, cur_depth, 1)
             remaining_iters -= self.iter_count
             print(f"find_best_move: {moves}")
 
