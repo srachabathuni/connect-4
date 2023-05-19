@@ -10,6 +10,9 @@ BLANK = 0
 PLAYER_1 = 1
 PLAYER_2 = 2 
 PLAYER_TEXT = ["-", "O", "X"]
+PLAYER_TEXT_HIGHLIGHT = ["-", "\033[91mO\033[0m", "\033[91mX\033[0m"]
+PLAYER_TEXT_STREAM = ["-", "o", "x"]
+PLAYER_TEXT_HIGHLIGHT_STREAM = ["-", "O", "X"]
 
 SUCCESS = 0
 ERR_COLUMN_FULL = 1
@@ -19,12 +22,10 @@ ERR_STACK_EMPTY = 4
 WIN_FOUND = 5
 WIN_NOT_FOUND = 6
 
-MAX_DEPTH = TO_WIN + 3
+MAX_DEPTH = TO_WIN
 MIN_WEIGHT = -100000
 
-DEBUG = False
-
-
+DEBUG = True
 def debug(msg):
     if DEBUG:
         sys.stderr.write(msg)
@@ -218,26 +219,27 @@ class Board:
         return ret
 
     def print_board(self, outstream=sys.stdout):
-        START_RED = '\033[91m'
-        END_RED = '\033[0m'
         last_move = None
         if self.move_stack:
             last_move = [self.chips_in_column[self.move_stack[-1]]-1, self.move_stack[-1]]
         if not DEBUG and outstream == sys.stderr:
             return
 
+        if outstream == sys.stderr:
+            player_text_default = PLAYER_TEXT_STREAM
+            player_text_highlight = PLAYER_TEXT_HIGHLIGHT_STREAM
+        else:
+            player_text_default = PLAYER_TEXT
+            player_text_highlight = PLAYER_TEXT_HIGHLIGHT
+
         for r in range(self.rows-1, -1, -1):
             for c in range(len(self.board[r])):
-                highlight = False
+                player_text = player_text_default
                 if last_move and \
                         r == last_move[0] and c == last_move[1] and \
                         outstream != sys.stderr:
-                    highlight = True
-                if highlight:
-                    outstream.write(START_RED)
-                outstream.write(f"{PLAYER_TEXT[self.board[r][c]]} ")
-                if highlight:
-                    outstream.write(END_RED)
+                    player_text = player_text_highlight
+                outstream.write(f"{player_text[self.board[r][c]]} ")
             outstream.write("\n")
         for i in range(self.columns):
             outstream.write(f"{i} ")
@@ -299,7 +301,7 @@ class Connect4Engine:
 
     def _find_best_move(self, board, max_depth):
         next_moves = [x for x in range(0, board.columns)]
-        remaining_iters = board.columns ** MAX_DEPTH
+        remaining_iters = (board.columns ** MAX_DEPTH)
         cur_depth = 0
         while True:
             cur_depth += 1
