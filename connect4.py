@@ -210,6 +210,13 @@ class Board:
                 return False
         return True
 
+    def forward(self, moves):
+        for m in moves:
+            ret = self.play_check_win(m)
+            if ret != WIN_NOT_FOUND:
+                break
+        return ret
+
     def print_board(self, outstream=sys.stdout):
         START_RED = '\033[91m'
         END_RED = '\033[0m'
@@ -305,7 +312,7 @@ class Connect4Engine:
             for i in range(len(moves)):
                 moves[i] = self._get_weight(board, next_moves[i], 0, cur_depth, 1)
             remaining_iters -= self.iter_count
-            # print(f"find_best_move: {moves}")
+            print(f"find_best_move: {moves}")
 
             short_list = []
             m = MIN_WEIGHT
@@ -317,7 +324,7 @@ class Connect4Engine:
                     m = moves[i]
                 elif moves[i] == m:
                     short_list.append(next_moves[i])
-            # print(f"Next moves: {short_list}")
+            print(f"Next moves: {short_list}")
             if len(short_list) == 1:
                 return short_list[0]
             next_moves = short_list
