@@ -179,6 +179,9 @@ class Board:
     def _flip_player(self):
         self.next_player = PLAYER_2 if self.next_player == PLAYER_1 else PLAYER_1
 
+    def get_last_player(self):
+        return PLAYER_2 if self.next_player == PLAYER_1 else PLAYER_1
+
     def play_check_win(self, column):
         player = self.next_player
         p = self.play(column)
@@ -208,12 +211,26 @@ class Board:
         return True
 
     def print_board(self, outstream=sys.stdout):
+        START_RED = '\033[91m'
+        END_RED = '\033[0m'
+        last_move = None
+        if self.move_stack:
+            last_move = [self.chips_in_column[self.move_stack[-1]]-1, self.move_stack[-1]]
         if not DEBUG and outstream == sys.stderr:
             return
 
         for r in range(self.rows-1, -1, -1):
-            for c in self.board[r]:
-                outstream.write(f"{PLAYER_TEXT[c]} ")
+            for c in range(len(self.board[r])):
+                highlight = False
+                if last_move and \
+                        r == last_move[0] and c == last_move[1] and \
+                        outstream != sys.stderr:
+                    highlight = True
+                if highlight:
+                    outstream.write(START_RED)
+                outstream.write(f"{PLAYER_TEXT[self.board[r][c]]} ")
+                if highlight:
+                    outstream.write(END_RED)
             outstream.write("\n")
         for i in range(self.columns):
             outstream.write(f"{i} ")
@@ -224,20 +241,23 @@ class Board:
 class Connect4Engine:
     def __init__(self, board):
         self.board = board
+        self.iter_count = 0
+
+    def _get_max_possible_depth(self, remaining_iters, moves):
+        columns = self.board.columns
+        for i in range(1, 100):
+            if moves ** i > remaining_iters:
+                return i-1
+        return 100
 
     def _get_weight(self, board: Board, column: int,
                     depth: int, max_depth: int, player_multiplier: int) -> int:
-        if depth > max_depth:
-            # debug(f"IN: get_weight: player: {PLAYER_TEXT[player]}, col: {column}, depth: {depth}, pm: {player_multiplier}")
-            # debug(f"OUT: get_weight: max_depth, player: {PLAYER_TEXT[player]}, col: {column}, depth: {depth}, pm: {player_multiplier}")
-            # debug("-------------------")
-            return 0
-
         if board.is_column_full(column):
             return MIN_WEIGHT * player_multiplier
 
         player = board.next_player
         ret = board.play_check_win(column)
+        self.iter_count += 1
         if ret == WIN_FOUND:
             weight = (max_depth - depth) * player_multiplier
             debug(f"IN: get_weight: player: {PLAYER_TEXT[player]}, col: {column}, depth: {depth}, pm: {player_multiplier}")
@@ -272,11 +292,20 @@ class Connect4Engine:
 
     def _find_best_move(self, board, max_depth):
         next_moves = [x for x in range(0, board.columns)]
-        for cur_depth in range(1, max_depth + 1):
+        remaining_iters = board.columns ** MAX_DEPTH
+        cur_depth = 0
+        while True:
+            cur_depth += 1
+            max_possible_depth = self._get_max_possible_depth(remaining_iters, len(next_moves))
+            # print(f"cur_depth: {cur_depth}, max_pos_depth: {max_possible_depth}")
+            if cur_depth > max_possible_depth:
+                break
             moves = [MIN_WEIGHT] * len(next_moves)
+            self.iter_count = 0
             for i in range(len(moves)):
                 moves[i] = self._get_weight(board, next_moves[i], 0, cur_depth, 1)
-            print(f"find_best_move: {moves}")
+            remaining_iters -= self.iter_count
+            # print(f"find_best_move: {moves}")
 
             short_list = []
             m = MIN_WEIGHT
@@ -288,7 +317,7 @@ class Connect4Engine:
                     m = moves[i]
                 elif moves[i] == m:
                     short_list.append(next_moves[i])
-            print(f"Next moves: {short_list}")
+            # print(f"Next moves: {short_list}")
             if len(short_list) == 1:
                 return short_list[0]
             next_moves = short_list
@@ -299,15 +328,4 @@ class Connect4Engine:
         column = self._find_best_move(self.board, MAX_DEPTH)
         return column
 
-
-class BoardHistory:
-    def __init__(self):
-        self.boards = []
-
-    def push(self, board):
-        self.boards.append(board.clone())
-
-    def print_history(self):
-        for board in self.boards:
-            board.print_board()
 
