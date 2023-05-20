@@ -22,10 +22,12 @@ ERR_STACK_EMPTY = 4
 WIN_FOUND = 5
 WIN_NOT_FOUND = 6
 
-MAX_DEPTH = TO_WIN
+MAX_DEPTH = TO_WIN + 3
 MIN_WEIGHT = -100000
 
-DEBUG = True
+DEBUG = False
+
+
 def debug(msg):
     if DEBUG:
         sys.stderr.write(msg)
@@ -261,9 +263,6 @@ class Connect4Engine:
 
     def _get_weight(self, board: Board, column: int,
                     depth: int, max_depth: int, player_multiplier: int) -> int:
-        if board.is_column_full(column):
-            return MIN_WEIGHT * player_multiplier
-
         player = board.next_player
         ret = board.play_check_win(column)
         self.iter_count += 1
@@ -280,10 +279,14 @@ class Connect4Engine:
             board.undo()
             return 0
 
-        moves = [MIN_WEIGHT * player_multiplier] * board.columns
+        moves = []
         for i in range(board.columns):
             if not board.is_column_full(i):
-                moves[i] = self._get_weight(board, i, depth+1, max_depth, (-1)*player_multiplier)
+                moves.append(self._get_weight(board, i, depth+1,max_depth, (-1)*player_multiplier))
+
+        if len(moves) == 0:
+            board.undo()
+            return 0
 
         if player_multiplier < 0:
             ret = max(moves)
@@ -309,26 +312,33 @@ class Connect4Engine:
             # print(f"cur_depth: {cur_depth}, max_pos_depth: {max_possible_depth}")
             if cur_depth > max_possible_depth:
                 break
-            moves = [MIN_WEIGHT] * len(next_moves)
+
+            moves = []
             self.iter_count = 0
-            for i in range(len(moves)):
-                moves[i] = self._get_weight(board, next_moves[i], 1, cur_depth, 1)
+            for i in range(len(next_moves)):
+                if not board.is_column_full(next_moves[i]):
+                    moves.append([next_moves[i], self._get_weight(board, next_moves[i], 1, cur_depth, 1)])
             remaining_iters -= self.iter_count
-            print(f"find_best_move: {moves}")
+            print(f"fbm moves: {moves}, cur_depth: {cur_depth}")
+
+            if len(moves) == 0:
+                # This should never happen. This means board is full.
+                return None
 
             short_list = []
-            m = MIN_WEIGHT
+            m = (-1 * cur_depth) - 1
             for i in range(len(moves)):
-                if board.is_column_full(i):
-                    continue
-                if moves[i] > m:
-                    short_list = [next_moves[i]]
-                    m = moves[i]
-                elif moves[i] == m:
-                    short_list.append(next_moves[i])
-            print(f"Next moves: {short_list}")
+                if moves[i][1] > m:
+                    short_list = [moves[i][0]]
+                    m = moves[i][1]
+                elif moves[i][1] == m:
+                    short_list.append(moves[i][0])
+            print(f"fbm next_moves: {short_list}")
             if len(short_list) == 1:
                 return short_list[0]
+            elif m != 0:
+                # If we already have weights for all moves, going deeper won't change the result
+                break
             next_moves = short_list
 
         return next_moves[random.randint(0, len(next_moves)-1)]

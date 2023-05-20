@@ -17,9 +17,14 @@ def test01():
     test_moves(moves)
 
 
+def test03():
+    moves = [4, 4, 3, 2, 0, 1, 4, 2, 2, 0, 1, 1, 6, 5, 1, 3, 5, 5, 5, 6, 3, 3, 4, 5, 3, 3, 1, 0, 0, 0, 1, 4, 6, 4, 5]
+    test_moves(moves)
+
+
 def test02():
     moves = [3, 3, 4]
     test_moves(moves)
 
 
-test02()
+test03()

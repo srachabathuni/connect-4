@@ -8,14 +8,15 @@ board.play(first_move_col)
 msg = None
 while True:
     if board.is_full():
-        msg = "No winner"
+        print("No winner")
         break
 
     eng = connect4.Connect4Engine(board)
     move = eng.get_best_move()
     ret = board.play_check_win(move)
     board.print_board()
-    print(f"Ret: {ret}")
+    print("Move stack:")
+    print(board.move_stack)
 
     if ret == connect4.WIN_FOUND:
         print(f"{connect4.PLAYER_TEXT[board.get_last_player()]} won")
@@ -24,13 +25,4 @@ while True:
         msg = "No winner"
         break
 
-    eng = connect4.Connect4Engine(board)
-    move = eng.get_best_move()
-    ret = board.play_check_win(move)
-    board.print_board()
-    print(f"Ret: {ret}")
-
-    if ret == connect4.WIN_FOUND:
-        print(f"{connect4.PLAYER_TEXT[board.get_last_player()]} won")
-        break
 
