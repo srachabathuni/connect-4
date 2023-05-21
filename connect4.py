@@ -267,7 +267,7 @@ class Connect4Engine:
         ret = board.play_check_win(column)
         self.iter_count += 1
         if ret == WIN_FOUND:
-            weight = (max_depth - depth + 1) * player_multiplier
+            weight = (max_depth - depth + 1) 
             debug(f"IN: get_weight: player: {PLAYER_TEXT[player]}, col: {column}, depth: {depth}, pm: {player_multiplier}")
             board.print_board(outstream=sys.stderr)
             debug(f"OUT: val: {weight},  get_weight: player: {PLAYER_TEXT[player]}, col: {column}, depth: {depth}, pm: {player_multiplier}")
@@ -282,16 +282,13 @@ class Connect4Engine:
         moves = []
         for i in range(board.columns):
             if not board.is_column_full(i):
-                moves.append(self._get_weight(board, i, depth+1,max_depth, (-1)*player_multiplier))
+                moves.append(self._get_weight(board, i, depth+1,max_depth, 1))
 
         if len(moves) == 0:
             board.undo()
             return 0
 
-        if player_multiplier < 0:
-            ret = max(moves)
-        else:
-            ret = min(moves)
+        ret = max(moves) * (-1) * player_multiplier
 
         debug(f"IN: get_weight: player: {PLAYER_TEXT[player]}, col: {column}, depth: {depth}, pm: {player_multiplier}")
         board.print_board(outstream=sys.stderr)
